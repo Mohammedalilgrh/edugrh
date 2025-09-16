@@ -1,4 +1,4 @@
-Flask==2.3.2
+Flask
 Flask-SocketIO==5.3.4
 python-socketio==5.7.2
 python-engineio==4.4.1
