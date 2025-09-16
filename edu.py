@@ -1,8 +1,7 @@
 import os
 import json
-import threading
 from datetime import datetime
-from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
+from flask import Flask, render_template_string, request, jsonify, session, redirect
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 app = Flask(__name__)
@@ -20,19 +19,16 @@ next_user_id = 1
 if os.path.exists('sads.py'):
     try:
         with open('sads.py', 'r') as f:
-            exec(f.read())
+            content = f.read()
+            if content.strip():
+                exec(content)
     except:
         pass
 
-# Save user data periodically
+# Save user data
 def save_user_data():
-    while True:
-        socketio.sleep(30)
-        with open('sads.py', 'w') as f:
-            f.write(f"user_data = {json.dumps(user_data, indent=2)}\n")
-
-# Start background task to save user data
-socketio.start_background_task(save_user_data)
+    with open('sads.py', 'w') as f:
+        f.write(f"user_data = {json.dumps(user_data, indent=2)}\n")
 
 @app.route('/')
 def index():
@@ -62,6 +58,7 @@ def api_join():
     }
     
     session['user_id'] = user_id
+    save_user_data()
     return jsonify({'success': True, 'user_id': user_id})
 
 @app.route('/api/users')
