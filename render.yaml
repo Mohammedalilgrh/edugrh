@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: eduboard
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python edu.py
+    envVars:
+      - key: PORT
+        value: 10000
