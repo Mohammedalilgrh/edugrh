@@ -83,7 +83,7 @@ def handle_connect():
 @socketio.on('join_room')
 def handle_join(data):
     user_id = session.get('user_id')
-    if not user_id or user_id not in user_data:
+    if not user_id or user_id not in user_
         emit('error', {'msg': 'Not logged in'})
         return
     join_room('classroom')
@@ -152,7 +152,7 @@ def end_lecture():
 @socketio.on('audio_message')
 def handle_audio_message(data):
     user_id = session.get('user_id')
-    if user_id and user_id in user_data:
+    if user_id and user_id in user_
         data['user'] = user_data[user_id]['name']
         emit('audio_message', data, broadcast=True, include_self=False)
 
@@ -546,7 +546,7 @@ HTML_TEMPLATE = '''
                 <h2 class="section-title">🎓 EduBoard Classroom</h2>
                 <div class="join-link">
                     <p>Direct Join Link:</p>
-                    <a href="/classroom" id="join-link">Loading...</a>
+                    <a href="https://edugrh.onrender.com/classroom" id="join-link">https://edugrh.onrender.com/classroom</a>
                 </div>
                 <div id="login-form">
                     <div class="form-group">
@@ -658,14 +658,6 @@ HTML_TEMPLATE = '''
         const micBtn = document.getElementById('mic-btn');
         const micIcon = document.getElementById('mic-icon');
         const audioWave = document.getElementById('audio-wave');
-        const joinLink = document.getElementById('join-link');
-        
-        // Set the join link dynamically
-        window.addEventListener('load', () => {
-            const url = window.location.origin + '/classroom';
-            joinLink.href = url;
-            joinLink.textContent = url;
-        });
         
         // Initialize canvas
         function resizeCanvas() {
