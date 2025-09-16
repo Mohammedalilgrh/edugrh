@@ -83,7 +83,7 @@ def handle_connect():
 @socketio.on('join_room')
 def handle_join(data):
     user_id = session.get('user_id')
-    if not user_id or user_id not in user_
+    if not user_id or user_id not in user_data:
         emit('error', {'msg': 'Not logged in'})
         return
     join_room('classroom')
@@ -152,7 +152,7 @@ def end_lecture():
 @socketio.on('audio_message')
 def handle_audio_message(data):
     user_id = session.get('user_id')
-    if user_id and user_id in user_
+    if user_id and user_id in user_data:
         data['user'] = user_data[user_id]['name']
         emit('audio_message', data, broadcast=True, include_self=False)
 
@@ -984,4 +984,3 @@ HTML_TEMPLATE = '''
     </script>
 </body>
 </html>
-'''
