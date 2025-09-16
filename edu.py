@@ -4,15 +4,10 @@ import threading
 from datetime import datetime
 from flask import Flask, render_template_string, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
-import logging
-
-# Suppress Flask logs
-log = logging.getLogger('werkzeug')
-log.setLevel(logging.ERROR)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'edu_secret_key_2024'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 # Global data storage
 user_data = {}
@@ -41,7 +36,7 @@ socketio.start_background_task(save_user_data)
 
 @app.route('/')
 def index():
-    return redirect(url_for('classroom'))
+    return redirect('/classroom')
 
 @app.route('/classroom')
 def classroom():
@@ -83,7 +78,7 @@ def api_get_hands():
 
 @socketio.on('connect')
 def handle_connect():
-    print(f"Client connected: {request.sid}")
+    pass
 
 @socketio.on('join_room')
 def handle_join(data):
@@ -100,7 +95,6 @@ def handle_join(data):
     emit('online_update', list(online_users.values()), broadcast=True)
     emit('lecture_status', {'active': lecture_active}, broadcast=False)
     emit('hands_update', list(hands_raised.values()), broadcast=False)
-    print(f"{user_data[user_id]['name']} joined")
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -112,7 +106,6 @@ def handle_disconnect():
         del online_users[sid]
         emit('online_update', list(online_users.values()), broadcast=True)
         emit('hands_update', list(hands_raised.values()), broadcast=True)
-        print(f"{name} left")
 
 @socketio.on('draw')
 def handle_draw(data):
@@ -165,12 +158,7 @@ def handle_audio_message(data):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    print("🎓 EduBoard - Online Classroom System")
-    print("=" * 45)
-    print("Starting server...")
-    print(f"Access the classroom at: http://localhost:{port}/classroom")
-    print("=" * 45)
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    socketio.run(app, host='0.0.0.0', port=port)
 
 # HTML Template with Dark Mode and Audio Chat
 HTML_TEMPLATE = '''
@@ -558,7 +546,7 @@ HTML_TEMPLATE = '''
                 <h2 class="section-title">🎓 EduBoard Classroom</h2>
                 <div class="join-link">
                     <p>Direct Join Link:</p>
-                    <a href="/classroom" id="join-link">http://localhost:5000/classroom</a>
+                    <a href="/classroom" id="join-link">Loading...</a>
                 </div>
                 <div id="login-form">
                     <div class="form-group">
@@ -975,7 +963,6 @@ HTML_TEMPLATE = '''
         });
         
         function lowerSpecificHand(userId) {
-            // In a real implementation, you would send a message to that specific user
             showNotification(`Hand lowered for ${userId}`);
         }
         
@@ -996,13 +983,10 @@ HTML_TEMPLATE = '''
         
         socket.on('audio_message', data => {
             showNotification(`${data.user} sent audio message`);
-            // In a real implementation, you would play the audio
-            // For demo, we'll just show a notification
         });
         
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            // Focus on name field for quick login
             document.getElementById('name').focus();
         });
     </script>
