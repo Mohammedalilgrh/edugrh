@@ -103,4 +103,6 @@ if __name__ == '__main__':
         with open('sads.json', 'w') as f:
             json.dump({}, f)
 
-    socketio.run(app, debug=True, host='0.0.0.0')
+    # The following line is removed for Render deployment with Gunicorn
+    # socketio.run(app, debug=True, host='0.0.0.0')
+    pass  # Keep the script executable, but don't run the server directly
