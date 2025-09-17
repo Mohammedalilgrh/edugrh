@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Online Whiteboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #222;
+            color: #fff;
+        }
+        #whiteboard {
+            border: 2px solid #eee;
+        }
+        #user-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #user-list li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Online Whiteboard</h1>
+
+    <!-- Login Form -->
+    <h2>Login</h2>
+    <form action="/login" method="post">
+        <input type="text" name="username" placeholder="Username" required>
+        <input type="tel" name="phone_number" placeholder="Phone Number" required>
+        <button type="submit">Join</button>
+    </form>
+
+    <!-- Whiteboard -->
+    <canvas id="whiteboard" width="800" height="600"></canvas>
+    <br>
+    <button id="clear-button">Clear Whiteboard</button>
+    <button id="raise-hand-button">Raise Hand</button>
+    <button id="end-lecture-button">End Lecture</button>
+
+    <!-- Audio Controls -->
+    <h2>Audio</h2>
+    <button id="start-audio-button">Start Audio</button>
+    <button id="stop-audio-button">Stop Audio</button>
+
+    <!-- User List -->
+    <h2>Who's Online</h2>
+    <ul id="user-list">
+        {% for user in users %}
+            <li>{{ user.username }}</li>
+        {% endfor %}
+    </ul>
+
+    <!-- Audio Elements -->
+    <audio id="remote-audio" controls autoplay muted></audio>
+
+    <script>
+        const socket = io();
+        const canvas = document.getElementById('whiteboard');
+        const ctx = canvas.getContext('2d');
+        const clearButton = document.getElementById('clear-button');
+        const raiseHandButton = document.getElementById('raise-hand-button');
+        const endLectureButton = document.getElementById('end-lecture-button');
+        const userList = document.getElementById('user-list');
+        const startAudioButton = document.getElementById('start-audio-button');
+        const stopAudioButton = document.getElementById('stop-audio-button');
+        const remoteAudio = document.getElementById('remote-audio');
+
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let audioStream = null;
+        let mediaRecorder = null;
+
+        // Set up canvas
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+
+        // Event listeners for drawing
+        canvas.addEventListener('mousedown', (e) => {
+            drawing = true;
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        canvas.addEventListener('mouseout', () => {
+            drawing = false;
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!drawing) return;
+            draw(lastX, lastY, e.offsetX, e.offsetY);
+            socket.emit('whiteboard_event', {
+                x1: lastX,
+                y1: lastY,
+                x2: e.offsetX,
+                y2: e.offsetY,
+                color: ctx.strokeStyle,
+                width: ctx.lineWidth
+            });
+            lastX = e.offsetX;
+            lastY = e.offsetY;
+        });
+
+        // Drawing function
+        function draw(x1, y1, x2, y2) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+
+        // Socket events
+        socket.on('connect', () => {
+            console.log('Connected to server');
+        });
+
+        socket.on('whiteboard_event', (data) => {
+            draw(data.x1, data.y1, data.x2, data.y2);
+        });
+
+        socket.on('clear_whiteboard', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        socket.on('user_list', (users) => {
+            userList.innerHTML = '';
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.textContent = user.username;
+                userList.appendChild(li);
+            });
+        });
+
+        socket.on('hand_raised', (userId) => {
+            alert(`User ${userId} raised their hand!`);
+        });
+
+        socket.on('lecture_ended', () => {
+            alert('Lecture has ended.');
+        });
+
+        socket.on('audio_stream', (data) => {
+            // Handle incoming audio stream
+            if (data.user_id !== socket.id) {
+                const audioBlob = new Blob([new Uint8Array(data.audio)], { type: 'audio/webm' });
+                const audioURL = URL.createObjectURL(audioBlob);
+                remoteAudio.src = audioURL;
+                remoteAudio.muted = false; // Unmute to hear the audio
+            }
+        });
+
+        // Button event listeners
+        clearButton.addEventListener('click', () => {
+            socket.emit('clear_whiteboard');
+        });
+
+        raiseHandButton.addEventListener('click', () => {
+            socket.emit('raise_hand', socket.id);
+        });
+
+        endLectureButton.addEventListener('click', () => {
+            socket.emit('end_lecture');
+        });
+
+        startAudioButton.addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(stream => {
+                    audioStream = stream;
+                    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+
+                    mediaRecorder.ondataavailable = event => {
+                        socket.emit('audio_stream', event.data.arrayBuffer());
+                    };
+
+                    mediaRecorder.start(100); // Send audio data every 100ms
+                    startAudioButton.disabled = true;
+                    stopAudioButton.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error accessing microphone:', error);
+                });
+        });
+
+        stopAudioButton.addEventListener('click', () => {
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                audioStream.getTracks().forEach(track => track.stop());
+                startAudioButton.disabled = false;
+                stopAudioButton.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
