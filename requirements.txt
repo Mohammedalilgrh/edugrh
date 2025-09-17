@@ -1,4 +1,1 @@
-Flask
-Flask-SocketIO
-gunicorn
-gevent
+pip install fastapi uvicorn
